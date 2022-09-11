@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <title>Unable to log in to payschoolscentral.com using a Linux browser</title>
+  </head>
+  <body>
+    <h1>Unable to log in to payschoolscentral.com using a Linux browser</h1>
+    <p>When I visit payschoolscentral.com using a web browser on 
+    Linux, no login form is presented, and I can't log in.
+
+    <h2>Steps to reproduce</h2>
+    <ol>
+      <li>While running a GNU/Linux operating system on a laptop 
+        or desktop, open a recent version of Firefox or Chrome.</li>
+      <li>Visit 
+        <a href="https://payschoolscentral.com/#/">payschoolscentral.com</a>.
+    </ol>
+
+    <h3>EXPECTED RESULT</h3>
+    <p>A login page is presented.</p>
+
+    <h3>ACTUAL RESULT</h3>
+    <p>An image is presented, but no login form appears.</p>
+
+    <h2>Screenshot</h2>
+    <p>This is what I see when I try to load the login page for 
+    payschoolscentral.com.</p>
+    <img src="images/payschoolscentral-homepage.png">
+
+    <h2>Theory about the cause</h2>
+    <p>I believe there is a bug in the JavaScript code for the 
+    payschoolscentral.com web site.</p>
+
+    <p>When I try to load the login page, I see the following 
+    error message in the browser's web console:</p>
+
+    <pre>
+    ERROR TypeError: a is undefined
+    getDeviceDetails http.interceptor.ts:69
+    intercept http.interceptor.ts:175
+    Choo 3
+    RxJS 17
+    node_modules Choo
+    AppComponent app.component.ts:51
+    Angular 5
+    Choo 6
+    Angular 10
+    </pre>
+
+    <p>The error message points to this code block in http.interceptor.ts:</p>
+
+    <pre><code>
+    if (window.navigator.userAgent.indexOf('Linux')          !== -1) {
+      const a = navigator.userAgent.split('Linux;')[1];
+      const os = a.split(';')[0];
+      if (os.indexOf('Android') !== -1) {
+          OSName = os;
+        } else {
+          OSName = 'Linux';
+        }
+    }
+    </code></pre>
+
+    <p>When I'm using Firefox, my user agent string is</p>
+
+    <pre>Mozilla/5.0 (X11; Linux x86_64; rv:104.0) Gecko/20100101 Firefox/104.0</pre>
+
+    <p>When I'm using Chrome, my user agent string is</p>
+
+    <pre>Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36</pre>
+
+    <p>In either case, the <code>if</code> condition</p>
+
+    <pre><code>window.navigator.userAgent.indexOf('Linux') !== -1</code></pre>
+
+    <p>ends up being true, because both user agent strings contain the word "Linux". So the <code>if</code> block is executed.</p>
+
+    <p>The problem begins with this expression:</p>
+
+    <pre><code>const a = navigator.userAgent.split('Linux;')[1];</code></pre>
+
+    <p>The string "Linux;" (with a semicolon at the end) does <em>not</em> appear in either user agent string. This means that the <code>split</code> method call will result in an array containing one element, which is the entire user agent string. (See <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split">Mozilla's documentation for the split method</a>.)</p>
+
+    <p>Then the array index expression <code>[1]</code> tries to access the second element of the array. But as mentioned, there is only one element in the array, and thus there is no second element. In JavaScript, accessing an array using an index outside the bounds of the array results in the value <code>undefined</code>. So the constant <code>a</code> ends up with the value <code>undefined</code>.
+
+    <p>Finally, this statement executes:</p>
+
+    <pre><code>const os = a.split(';')[0];</code></pre>
+
+    <p>The call to <code>split</code> causes a crash, because as just noted, the <code>a</code> constant is <code>undefined</code>, not an object with a <code>split</code> method. Which explains the error message we see in the console.
+
+    <h2>Workaround</h2>
+    <p>In Chrome, I can use the developer tools to change the browser's user agent string so that it does contain the string "Linux;" (with a semicolon at the end). When I do this, the login page does successfully load.</p>
+
+  </body>
+</html>
